@@ -8,14 +8,15 @@ def run_sim(Kp, Kd, Ki, start_angle_deg, max_torque=0.05):
     mass = 0.5                 # cube mass, kg
     g = 9.81                # gravity, m/s²
     d = 0.08                # distance from pivot edge to center of mass, m
-           # N·m
+
     max_wheelSpeed = 500    # rad/s
 
     # ---- Sim settings ----
     dt = 0.001
     t_end = 5
 
-
+    # addition of friction
+    friction_coef = 0.0001
 
     # has to stay upright
     targetAngle = 0.0
@@ -34,6 +35,8 @@ def run_sim(Kp, Kd, Ki, start_angle_deg, max_torque=0.05):
 
     t = 0.0
     while t < t_end:
+
+
         # PID Controls-
         error = targetAngle - cube_angle
         integral = integral + (error * dt)
@@ -41,6 +44,9 @@ def run_sim(Kp, Kd, Ki, start_angle_deg, max_torque=0.05):
         derivative = (error - previous_error) / dt
         previous_error = error
 
+        # Friction
+
+        viscousFrict = -friction_coef * wheel_speed
         #Torques
 
         gravity_torque = mass* g* d* np.sin(cube_angle)
@@ -48,6 +54,7 @@ def run_sim(Kp, Kd, Ki, start_angle_deg, max_torque=0.05):
         reaction_torque = Kp * error + Ki * integral + Kd * derivative
         reaction_torque = np.clip(reaction_torque, -max_torque, max_torque)
         netTorque = gravity_torque + reaction_torque
+
 
         # newtons second law T = Ia
         cube_acceleration = netTorque / cubeInertia
@@ -57,8 +64,11 @@ def run_sim(Kp, Kd, Ki, start_angle_deg, max_torque=0.05):
         cube_angle += cube_rate * dt
 
         # reaction wheel speed from T = ia, and derivative of acceleration
-        wheel_acceleration = reaction_torque / wheelInertia
+        wheel_acceleration = (reaction_torque + viscousFrict) / wheelInertia
         wheel_speed += wheel_acceleration * dt
+
+
+
 
 
         # log everything
